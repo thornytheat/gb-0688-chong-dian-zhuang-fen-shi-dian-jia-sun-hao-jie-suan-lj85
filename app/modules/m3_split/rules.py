@@ -2,6 +2,10 @@ from datetime import datetime,timedelta,timezone
 from decimal import Decimal as D
 from app.errors import DomainError
 ZONE=timezone(timedelta(hours=8))
+def slot_label(rate):
+    if rate>=D(1):return '峰'
+    if rate>D('0.4'):return '平'
+    return '谷'
 def split(row,rates):
     cursor=row['start'];end=row['end'];seconds=D(str((end-cursor).total_seconds()));result=[]
     while cursor<end:
@@ -13,7 +17,9 @@ def split(row,rates):
         boundary=datetime.combine(local.date(),datetime.min.time(),ZONE)+timedelta(hours=b)
         stop=min(end,boundary);fraction=D(str((stop-cursor).total_seconds()))/seconds
         kwh=row['energy']*fraction
-        result.append({'id':row['id'],'station':row['station'],'order':row['order'],'start':cursor,'end':stop,'kwh':kwh,'rate':rate,'fee':kwh*rate})
+        result.append({'id':row['id'],'station':row['station'],'order':row.get('order',''),'start':cursor,'end':stop,
+                       'kwh':kwh,'rate':rate,'fee':kwh*rate,'day':local.date().isoformat(),'slot_a':a,'slot_b':b,
+                       'label':slot_label(rate)})
         cursor=stop
     # Keep measured energy exact after non-terminating Decimal divisions.
     if result:

@@ -27,3 +27,14 @@ def test_real_delta_sum(raw):
 def test_real_orders(raw):
     assert len(run(raw,stop=6,persist=False)['bills'])==40
 
+def test_period_anomaly_flag_propagates(raw):
+    x=run(raw,stop=6,persist=False)
+    flagged=[b for b in x['bills'] if b['period_flag']=='分时时段异常']
+    assert flagged
+    # Bills at stations whose every meter period is healthy carry no flag.
+    assert all('period_flag' in b for b in x['bills'])
+
+def test_minimal_rows_without_period_rows_still_work():
+    out=compare([r('1','1')],D('.01'))
+    assert out[0]['period_flag']=='' and out[0]['state']=='通过'
+

@@ -44,6 +44,28 @@ def create_app():
         data=request.get_json(silent=True)
         if not isinstance(data,dict): raise DomainError("BODY","请求必须是对象")
         return jsonify(store.review(run_id,data.get("version"),data.get("decision")))
+    @app.post("/api/reread/<run_id>")
+    def reread(run_id):
+        # 补读：成功才落账；同内容重试幂等复用；任何计算失败都不新增记录，旧版账单原样可查。
+        base=store.fetch(run_id)
+        if request.files:
+            file=request.files.get("file")
+            if file is None: raise DomainError("FILE","请选择文件")
+            raw=file.read(MAX_BYTES+1)
+            try: params=json.loads(request.form.get("params","{}"))
+            except ValueError: raise DomainError("PARAMS","参数格式错误")
+        else:
+            payload=request.get_json(silent=True)
+            if not isinstance(payload,dict): raise DomainError("BODY","请求必须是对象")
+            raw=payload.get("text")
+            if raw is not None and not isinstance(raw,str): raise DomainError("TEXT","数据必须为文本")
+            if raw is None: raw=None
+            params=payload.get("params")
+        try:
+            new_result=run(raw,params,persist=False,base_run=run_id)
+        except DomainError as exc:
+            raise DomainError("REREAD",f"补读失败，已恢复旧版账单 {run_id}：{exc.message}",exc.status)
+        return jsonify(store.reread(run_id,new_result))
     @app.get("/api/evidence.csv")
     def evidence():
         result=store.fetch(request.args["run"]) if request.args.get("run") else run()

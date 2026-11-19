@@ -26,3 +26,15 @@ def review(run_id,version,decision):
         cur=db.execute("UPDATE runs SET review=?,version=version+1 WHERE id=? AND version=?",(decision,run_id,version))
         if cur.rowcount!=1: raise DomainError("STALE","复核版本已更新",409)
     return fetch(run_id)
+def reread(base_id,new_result):
+    """补读：仅在新批次可完整计算且与旧批次不同时落账；失败调用方不得写入，旧账原样保留。"""
+    new_id=new_result["manifest"]["run_id"]
+    with connection() as db:
+        row=db.execute("SELECT id,version,review FROM runs WHERE id=?",(base_id,)).fetchone()
+        if row is None: raise DomainError("NOT_FOUND","原批次不存在，无法补读",404)
+        cur=db.execute("INSERT OR IGNORE INTO runs(id,payload) VALUES(?,?)",(new_id,json.dumps(new_result,ensure_ascii=False)))
+        created=cur.rowcount==1
+    result=fetch(new_id)
+    result["reread"]={"base_run":base_id,"status":"created" if created else "reused",
+                      "base_review":row["review"],"base_version":row["version"]}
+    return result

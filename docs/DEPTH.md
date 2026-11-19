@@ -29,6 +29,10 @@
 | TRAP-23 | 分时端点 | 数值或归属错误 | 显式契约和守恒检查 | `app/modules/m3_split/rules.py` | `tests/test_m3_split.py::test_boundary_split` |
 | TRAP-24 | 分币尾差 | 数值或归属错误 | 显式契约和守恒检查 | `app/modules/m5_fees/rules.py` | `tests/test_m5_fees.py::test_pennies_conserved` |
 | TRAP-25 | 费率版本重叠 | 数值或归属错误 | 显式契约和守恒检查 | `app/modules/m2_tariffs/rules.py` | `tests/test_m2_tariffs.py::test_overlap_versions` |
+| TRAP-26 | 峰谷损耗混账 | 谷段低价订单承担不相称损耗，含损单价失真 | 按站点×日期×费率时段两级分摊，分段含损单价可追溯 | `app/modules/m4_loss/rules.py` `app/modules/m5_fees/rules.py` | `tests/test_m4_loss.py::test_slot_loss_follows_segments` `tests/test_m5_fees.py::test_period_gross_rate_is_exact` |
+| TRAP-27 | 时段负损耗硬摊 | 负损耗被强行分给订单产生反向成本 | 时段异常入证据不硬摊，缺口进站级残差池，整站仍守恒 | `app/modules/m4_loss/rules.py` | `tests/test_m4_loss.py::test_period_evidence_keys_are_unique_per_station_slot` |
+| TRAP-28 | 补读污染旧账 | 失败的补读覆盖或挤掉已复核账单 | 先算后落、失败不写、同内容幂等复用，manifest混入base_run | `app/store.py` `app/main.py` | `tests/test_reread.py` |
+| TRAP-29 | 长Decimal尾差 | 40位精度链式除法后跨站求和误判不守恒 | 站级守卫精度（1e-9 kWh）核对+末段强制对齐 | `app/modules/m7_batches/rules.py` `app/modules/m4_loss/rules.py` | `tests/test_m4_loss.py::test_real_loss_conserved` |
 
 ## 对账规则
 
